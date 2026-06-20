@@ -4,8 +4,8 @@
   "description": "One platform for every society need",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#059669",
+  "background_color": "#FDF8F2",
+  "theme_color": "#003049",
   "orientation": "portrait-primary",
   "icons": [
     {

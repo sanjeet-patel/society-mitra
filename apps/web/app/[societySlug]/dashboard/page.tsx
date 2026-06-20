@@ -106,7 +106,7 @@ export default async function DashboardPage({
                     <p className="text-xs text-muted-foreground">{c.role_label}</p>
                   )}
                 </div>
-                <Phone className="h-4 w-4 text-emerald-600" />
+                <Phone className="h-4 w-4 text-primary" />
               </a>
             ))}
           </CardContent>

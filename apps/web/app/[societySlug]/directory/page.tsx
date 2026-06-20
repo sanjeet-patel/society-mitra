@@ -39,7 +39,7 @@ export default async function DirectoryPage({
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{tenant.full_name}</CardTitle>
                     {tenant.police_verified && (
-                      <Badge variant="outline" className="text-emerald-600">
+                      <Badge variant="outline" className="text-primary">
                         Verified
                       </Badge>
                     )}

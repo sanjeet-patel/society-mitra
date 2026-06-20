@@ -67,7 +67,7 @@ export function ProfileForm({
         <CardContent>
           <form action={handleProfileUpdate} className="space-y-4">
             {error && <p className="text-sm text-destructive">{error}</p>}
-            {success && <p className="text-sm text-emerald-600">{success}</p>}
+            {success && <p className="text-sm text-primary">{success}</p>}
 
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>

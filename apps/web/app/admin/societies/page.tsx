@@ -15,17 +15,19 @@ export default async function AdminSocietiesPage() {
   const { societies } = await listSocieties();
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="border-b bg-background">
+    <div className="min-h-screen bg-palette-navy/[0.03]">
+      <header className="border-b border-palette-navy/10 bg-background">
         <div className="container mx-auto px-4 h-16 flex items-center gap-4">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-2 text-palette-navy">
               <ArrowLeft className="h-4 w-4" />
               Home
             </Button>
           </Link>
-          <Building2 className="h-5 w-5 text-emerald-600" />
-          <h1 className="font-bold text-lg">Platform Admin</h1>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-palette-navy">
+            <Building2 className="h-4 w-4 text-palette-gold" />
+          </div>
+          <h1 className="font-bold text-lg text-palette-navy">Platform Admin</h1>
         </div>
       </header>
 

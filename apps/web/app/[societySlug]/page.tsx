@@ -23,11 +23,13 @@ export default async function SocietyLandingPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b">
+      <header className="border-b border-palette-navy/10 bg-background/85 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-emerald-600" />
-            <span className="font-bold text-lg">{society.name}</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-palette-navy">
+              <Building2 className="h-5 w-5 text-palette-gold" />
+            </div>
+            <span className="font-bold text-lg tracking-tight text-palette-navy">{society.name}</span>
           </div>
           <Link href="/">
             <Button variant="ghost" size="sm">

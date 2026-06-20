@@ -146,7 +146,7 @@ export function ServicesPageClient({
                   <CardTitle className="text-base flex items-center gap-2">
                     {provider.name}
                     {provider.is_verified && (
-                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      <CheckCircle className="h-4 w-4 text-primary" />
                     )}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
