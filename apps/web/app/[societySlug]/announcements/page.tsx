@@ -18,7 +18,7 @@ export default async function AnnouncementsPage({
 
   if (result.error === "Society not found") notFound();
   if (result.error === "Unauthorized") redirect(`/login?redirect=/${societySlug}/announcements`);
-  if (result.error === "Not a member") redirect(`/${societySlug}/join`);
+  if (result.error === "Not a member") redirect(`/login?redirect=/${societySlug}/dashboard`);
 
   const isAdmin = result.membership && isAdminRole(result.membership.role);
   const announcements = await getAnnouncements(societySlug);

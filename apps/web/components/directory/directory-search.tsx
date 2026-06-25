@@ -9,6 +9,7 @@ import { Search, Phone, Mail, Droplets, Car } from "lucide-react";
 interface DirectoryMember {
   id: string;
   role: string;
+  tags?: string[];
   profiles: {
     full_name: string;
     phone: string | null;
@@ -52,7 +53,7 @@ export function DirectorySearch({
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name, house number, mobile, vehicle..."
+          placeholder="Search by name, house number, mobile, tag, vehicle..."
           className="pl-10"
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
@@ -80,7 +81,14 @@ export function DirectorySearch({
                       </p>
                     )}
                   </div>
-                  <Badge variant="secondary">{member.role}</Badge>
+                  <div className="flex flex-wrap items-start justify-end gap-1.5 max-w-[45%]">
+                    <Badge variant="secondary">{member.role}</Badge>
+                    {(member.tags ?? []).map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">

@@ -46,12 +46,18 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/admin")) {
     if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
     return supabaseResponse;
   }
 
   if (pathname === "/login" && user) {
+    const redirectTo = request.nextUrl.searchParams.get("redirect");
+    if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+      return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -68,6 +74,7 @@ export async function middleware(request: NextRequest) {
       "announcements",
       "emergency",
       "services",
+      "classifieds",
       "profile",
       "admin",
     ];

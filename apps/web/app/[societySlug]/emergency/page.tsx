@@ -16,7 +16,7 @@ export default async function EmergencyPage({
 
   if (result.error === "Society not found") notFound();
   if (result.error === "Unauthorized") redirect(`/login?redirect=/${societySlug}/emergency`);
-  if (result.error === "Not a member") redirect(`/${societySlug}/join`);
+  if (result.error === "Not a member") redirect(`/login?redirect=/${societySlug}/dashboard`);
 
   const isAdmin = result.membership && isAdminRole(result.membership.role);
   const contacts = await getEmergencyContacts(societySlug);

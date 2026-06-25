@@ -41,7 +41,8 @@ export function JoinSocietyForm({ societySlug }: { societySlug: string }) {
       <CardHeader>
         <CardTitle>Join Society</CardTitle>
         <CardDescription>
-          Submit your details. A society admin will approve your membership.
+          One account per house/unit. Family members share this login — add them later under
+          Profile.
         </CardDescription>
       </CardHeader>
       <CardContent>

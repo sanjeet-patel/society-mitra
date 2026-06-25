@@ -11,7 +11,7 @@ interface PendingMember {
   id: string;
   role: string;
   created_at: string;
-  profiles: { full_name: string; phone: string | null; email: string | null } | null;
+  profiles: { full_name: string; phone: string | null; email?: string | null } | null;
   units: { unit_number: string } | null;
 }
 

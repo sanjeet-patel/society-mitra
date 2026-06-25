@@ -6,12 +6,12 @@ import {
   Megaphone,
   Phone,
   Wrench,
+  Tag,
   Settings,
-  LogOut,
   Shield,
 } from "lucide-react";
-import { signOut } from "@/lib/actions/auth";
 import { isAdminRole } from "@/lib/auth";
+import { LogoutButton } from "@/components/auth/logout-button";
 import type { MemberRole } from "@society-mitra/shared";
 
 interface SocietyNavProps {
@@ -27,6 +27,7 @@ const navItems = [
   { href: "announcements", label: "Announcements", icon: Megaphone },
   { href: "emergency", label: "Emergency", icon: Phone },
   { href: "services", label: "Services", icon: Wrench },
+  { href: "classifieds", label: "Classifieds", icon: Tag },
 ];
 
 export function SocietyNav({
@@ -60,7 +61,7 @@ export function SocietyNav({
               </Link>
             ))}
             {isAdmin && (
-              <Link href={`/${societySlug}/admin/members`}>
+              <Link href={`/${societySlug}/admin`}>
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Shield className="h-4 w-4" />
                   Admin
@@ -77,17 +78,13 @@ export function SocietyNav({
               </Button>
             </Link>
             {isPlatformAdmin && (
-              <Link href="/admin/societies">
+              <Link href="/admin">
                 <Button variant="outline" size="sm">
                   Platform
                 </Button>
               </Link>
             )}
-            <form action={signOut}>
-              <Button variant="ghost" size="sm" type="submit" className="gap-2">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </form>
+            <LogoutButton />
           </div>
         </div>
 

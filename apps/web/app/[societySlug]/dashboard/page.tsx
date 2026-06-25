@@ -20,7 +20,7 @@ export default async function DashboardPage({
 
   if (result.error === "Society not found") notFound();
   if (result.error === "Unauthorized") redirect(`/login?redirect=/${societySlug}/dashboard`);
-  if (result.error === "Not a member") redirect(`/${societySlug}/join`);
+  if (result.error === "Not a member") redirect(`/login?redirect=/${societySlug}/dashboard`);
 
   const { society, membership } = result;
   const isAdmin = membership && isAdminRole(membership.role);

@@ -57,17 +57,18 @@ export default async function SocietyLandingPage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Join this society
+              Member access
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {!profile && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Sign in to request membership in {society.name}.
+                  Accounts are created by your society admin. Sign in with the mobile number and
+                  password shared with you.
                 </p>
-                <Link href={`/login?redirect=/${societySlug}/join`}>
-                  <Button className="w-full">Sign In to Join</Button>
+                <Link href={`/login?redirect=/${societySlug}/dashboard`}>
+                  <Button className="w-full">Sign In</Button>
                 </Link>
               </>
             )}
@@ -78,22 +79,10 @@ export default async function SocietyLandingPage({
               </Link>
             )}
 
-            {profile && membership?.status === "pending" && (
-              <p className="text-sm text-amber-600">
-                Your membership request is pending admin approval.
+            {profile && membership?.status !== "approved" && (
+              <p className="text-sm text-muted-foreground">
+                Your account is not active in this society. Contact your society admin for access.
               </p>
-            )}
-
-            {profile && membership?.status === "rejected" && (
-              <p className="text-sm text-destructive">
-                Your membership request was rejected. Contact society admin.
-              </p>
-            )}
-
-            {profile && !membership && (
-              <Link href={`/${societySlug}/join`}>
-                <Button className="w-full">Request to Join</Button>
-              </Link>
             )}
           </CardContent>
         </Card>

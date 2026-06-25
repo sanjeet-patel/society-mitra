@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Lexend, Geist_Mono } from "next/font/google";
+import { Lexend, Geist_Mono, Geist } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_URL } from "@/lib/config";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const lexend = Lexend({
   variable: "--font-lexend",
@@ -51,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lexend.variable} ${geistMono.variable} h-full antialiased`}
+      className={cn("h-full", "antialiased", lexend.variable, geistMono.variable, "font-sans", geist.variable)}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />

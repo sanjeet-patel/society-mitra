@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import { requireSocietyAdmin } from "@/lib/auth";
-import { getPendingMembers } from "@/lib/actions/members";
-import { PendingMembersList } from "@/components/admin/pending-members";
+import { getAllMembers, getPendingMembers } from "@/lib/actions/members";
+import { MemberManager } from "@/components/admin/member-manager";
+import { SocietyAdminHeader } from "@/components/admin/society-admin-header";
 
 export default async function AdminMembersPage({
   params,
@@ -13,21 +14,26 @@ export default async function AdminMembersPage({
 
   if (result.error === "Society not found") notFound();
   if (result.error === "Unauthorized") redirect(`/login?redirect=/${societySlug}/admin/members`);
-  if (result.error === "Not a member") redirect(`/${societySlug}/join`);
+  if (result.error === "Not a member") redirect(`/${societySlug}/dashboard`);
   if (result.error === "Forbidden") redirect(`/${societySlug}/dashboard`);
 
-  const pendingMembers = await getPendingMembers(societySlug);
+  const [members, pendingMembers] = await Promise.all([
+    getAllMembers(societySlug),
+    getPendingMembers(societySlug),
+  ]);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-2">Member Approvals</h1>
-      <p className="text-muted-foreground mb-6">
-        Review and approve membership requests for {result.society!.name}
-      </p>
-
-      <PendingMembersList
+      <SocietyAdminHeader
         societySlug={societySlug}
-        members={pendingMembers as Parameters<typeof PendingMembersList>[0]["members"]}
+        societyName={result.society!.name}
+        title="Members"
+      />
+      <MemberManager
+        societySlug={societySlug}
+        societyName={result.society!.name}
+        members={members as Parameters<typeof MemberManager>[0]["members"]}
+        pendingMembers={pendingMembers as Parameters<typeof MemberManager>[0]["pendingMembers"]}
       />
     </div>
   );

@@ -12,13 +12,34 @@ Community-first society management SaaS built with **Next.js**, **Supabase**, an
 ## Features (MVP)
 
 - Multi-tenant societies via path routing (`/greenvalley`)
-- Platform admin society creation
+- **Admin-only onboarding** — society admins provision members (mobile + temp password)
+- Platform super-admin dashboard with cross-society KPIs
+- Society admin console with full CRUD (members, categories, vendors, classifieds, helpline, announcements)
 - Member directory with search
 - Announcements with web push
 - Emergency contact directory
 - Local service directory with reviews
-- Resident join/approval flow
+- Classified ads
+- Credential slip printing for offline handoff
+- Force password change on first login
 - Installable PWA
+
+## Operating model & roles
+
+| Role | Login | Capabilities |
+|------|-------|--------------|
+| **Platform super admin** | Mobile in `PLATFORM_ADMIN_PHONES` | Create/edit societies, assign society admins, platform dashboard, global categories |
+| **Society admin** | Mobile + password (provisioned) | Create members, CRUD all society content, reset member passwords |
+| **Member (owner/tenant)** | Mobile + password (provisioned) | Use society features; change password in Profile; add family under same login |
+| **Block admin** | Same as member | Limited admin permissions (same console access as society admin in MVP) |
+
+**Business rules:**
+
+1. **Mobile number = login ID** (10-digit Indian mobile)
+2. **One account per house/unit** — family members share the login; add family in Profile
+3. **No public signup or self-join** — all accounts created by admins
+4. **Offline credentials** — admins print/share credential slips; no SMS from the app
+5. **First login** — users with a temporary password must change it before using the app
 
 ## Getting Started
 
@@ -59,9 +80,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 5. Platform admin setup
 
-1. Sign in with an email listed in `PLATFORM_ADMIN_EMAILS`
-2. Visit `/admin/societies` to create a society
-3. Share the society URL (e.g. `/greenvalley`) with residents
+1. Sign in with mobile `9999999999` / `demo-admin` (or any number listed in `PLATFORM_ADMIN_PHONES`)
+2. Visit `/admin` for the platform dashboard
+3. Create a society at `/admin/societies`, then **Manage** → assign a society admin (mobile + temp password)
+4. Society admin signs in, provisions members at `/{slug}/admin/members`, prints credential slips
+5. Members sign in and change password under Profile
 
 ### Demo society
 
@@ -88,7 +111,7 @@ After `supabase db reset`, a demo society **Green Valley Apartments** is availab
 3. In **Authentication → URL Configuration**:
    - **Site URL:** `https://societymitra.info`
    - **Redirect URLs:** `https://societymitra.info/auth/callback`
-4. Add the same env vars in Vercel (Supabase keys, `PLATFORM_ADMIN_EMAILS`, VAPID keys)
+4. Add the same env vars in Vercel (Supabase keys, `PLATFORM_ADMIN_PHONES`, VAPID keys)
 5. Generate VAPID keys: `npx web-push generate-vapid-keys`
 
 ## Project Structure

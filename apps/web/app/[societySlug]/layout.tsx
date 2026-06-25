@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getSocietyBySlug,
   getCurrentProfile,
   getMembership,
+  getCurrentUser,
 } from "@/lib/auth";
 import { SocietyNav } from "@/components/layout/society-nav";
+import { SessionBar } from "@/components/layout/session-bar";
 
 export default async function SocietyLayout({
   children,
@@ -18,6 +20,11 @@ export default async function SocietyLayout({
   const society = await getSocietyBySlug(societySlug);
   if (!society) notFound();
 
+  const user = await getCurrentUser();
+  if (user?.user_metadata?.must_change_password) {
+    redirect(`/change-password?redirect=/${societySlug}/dashboard`);
+  }
+
   const profile = await getCurrentProfile();
   let membership = null;
   if (profile) {
@@ -26,14 +33,16 @@ export default async function SocietyLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {membership?.status === "approved" && (
+      {membership?.status === "approved" ? (
         <SocietyNav
           societySlug={societySlug}
           societyName={society.name}
           role={membership.role}
           isPlatformAdmin={profile?.is_platform_admin}
         />
-      )}
+      ) : user ? (
+        <SessionBar userName={profile?.full_name} homeHref={`/${societySlug}`} />
+      ) : null}
       <main className="flex-1">{children}</main>
     </div>
   );

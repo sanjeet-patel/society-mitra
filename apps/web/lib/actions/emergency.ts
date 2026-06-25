@@ -57,6 +57,48 @@ export async function deleteEmergencyContact(societySlug: string, id: string) {
   return { success: true };
 }
 
+export async function updateEmergencyContact(
+  societySlug: string,
+  id: string,
+  formData: FormData
+) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return { error: authError || "Not found" };
+
+  const parsed = emergencyContactSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+    contactType: formData.get("contactType"),
+    roleLabel: formData.get("roleLabel") || undefined,
+    whatsapp: formData.get("whatsapp") || undefined,
+    sortOrder: formData.get("sortOrder") ? Number(formData.get("sortOrder")) : 0,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("emergency_contacts")
+    .update({
+      name: parsed.data.name,
+      phone: parsed.data.phone,
+      contact_type: parsed.data.contactType,
+      role_label: parsed.data.roleLabel ?? null,
+      whatsapp: parsed.data.whatsapp ?? null,
+      sort_order: parsed.data.sortOrder,
+    })
+    .eq("id", id)
+    .eq("society_id", society.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/${societySlug}/admin/helpline`);
+  revalidatePath(`/${societySlug}/emergency`);
+  return { success: true };
+}
+
 export async function getEmergencyContacts(societySlug: string) {
   const society = (await requireMembership(societySlug)).society;
   if (!society) {

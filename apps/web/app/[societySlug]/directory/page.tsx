@@ -15,7 +15,7 @@ export default async function DirectoryPage({
 
   if (result.error === "Society not found") notFound();
   if (result.error === "Unauthorized") redirect(`/login?redirect=/${societySlug}/directory`);
-  if (result.error === "Not a member") redirect(`/${societySlug}/join`);
+  if (result.error === "Not a member") redirect(`/login?redirect=/${societySlug}/dashboard`);
 
   const members = await getDirectoryMembers(societySlug);
   const tenants = await getTenantsForSociety(societySlug);

@@ -8,82 +8,47 @@ import {
   requireSocietyAdmin,
 } from "@/lib/auth";
 import {
-  joinSocietySchema,
   profileSchema,
   familyMemberSchema,
   vehicleSchema,
   tenantSchema,
+  provisionMemberSchema,
+  updateMemberSchema,
+  resetPasswordSchema,
 } from "@society-mitra/shared";
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { provisionMember, resetUserPassword, getProfileUserId } from "@/lib/actions/provisioning";
+import { logAuditEvent } from "@/lib/actions/audit";
+
+async function unitAlreadyHasAccount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  societyId: string,
+  unitId: string,
+  excludeProfileId?: string
+) {
+  let query = supabase
+    .from("society_members")
+    .select("id")
+    .eq("society_id", societyId)
+    .eq("unit_id", unitId)
+    .in("status", ["pending", "approved"]);
+
+  if (excludeProfileId) {
+    query = query.neq("profile_id", excludeProfileId);
+  }
+
+  const { data } = await query.limit(1);
+  return (data?.length ?? 0) > 0;
+}
 
 export async function joinSociety(societySlug: string, formData: FormData) {
-  const parsed = joinSocietySchema.safeParse({
-    fullName: formData.get("fullName"),
-    phone: formData.get("phone") || undefined,
-    unitNumber: formData.get("unitNumber"),
-    role: formData.get("role") || "owner",
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message || "Invalid input" };
-  }
-
-  const supabase = await createClient();
-  const profile = await getCurrentProfile();
-  if (!profile) return { error: "Please log in first" };
-
-  const society = await getSocietyBySlug(societySlug);
-  if (!society) return { error: "Society not found" };
-
-  await supabase
-    .from("profiles")
-    .update({
-      full_name: parsed.data.fullName,
-      phone: parsed.data.phone ?? profile.phone,
-    })
-    .eq("id", profile.id);
-
-  let { data: unit } = await supabase
-    .from("units")
-    .select("id")
-    .eq("society_id", society.id)
-    .eq("unit_number", parsed.data.unitNumber)
-    .single();
-
-  if (!unit) {
-    const { data: newUnit, error: unitError } = await supabase
-      .from("units")
-      .insert({
-        society_id: society.id,
-        unit_number: parsed.data.unitNumber,
-      })
-      .select("id")
-      .single();
-
-    if (unitError) return { error: unitError.message };
-    unit = newUnit;
-  }
-
-  const memberCount = await getApprovedMemberCount(society.id);
-  if (society.family_limit && memberCount >= society.family_limit) {
-    return { error: "This society has reached its member limit" };
-  }
-
-  const { error } = await supabase.from("society_members").upsert(
-    {
-      society_id: society.id,
-      profile_id: profile.id,
-      unit_id: unit.id,
-      role: parsed.data.role,
-      status: "pending",
-    },
-    { onConflict: "society_id,profile_id" }
-  );
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/${societySlug}`);
-  return { success: true };
+  void formData;
+  void societySlug;
+  return {
+    error:
+      "Self-join is disabled. Contact your society admin to get an account.",
+  };
 }
 
 export async function approveMember(
@@ -102,23 +67,26 @@ export async function approveMember(
       return { error: "Member limit reached for this plan" };
     }
 
-    const { data: existingAdmins } = await supabase
+    const { data: pendingMember } = await supabase
       .from("society_members")
-      .select("id")
+      .select("unit_id, profile_id")
+      .eq("id", memberId)
       .eq("society_id", society.id)
-      .eq("role", "society_admin")
-      .eq("status", "approved")
-      .limit(1);
+      .single();
 
-    if (!existingAdmins?.length) {
-      await supabase
-        .from("society_members")
-        .update({ status, role: "society_admin" })
-        .eq("id", memberId)
-        .eq("society_id", society.id);
-
-      revalidatePath(`/${societySlug}/admin/members`);
-      return { success: true };
+    if (
+      pendingMember?.unit_id &&
+      (await unitAlreadyHasAccount(
+        supabase,
+        society.id,
+        pendingMember.unit_id,
+        pendingMember.profile_id
+      ))
+    ) {
+      return {
+        error:
+          "This house/unit already has an approved account. Reject duplicate requests or ask the resident to add family under Profile.",
+      };
     }
   }
 
@@ -258,8 +226,8 @@ export async function getPendingMembers(societySlug: string) {
   const { error: authError, society } = await requireSocietyAdmin(societySlug);
   if (authError || !society) return [];
 
-  const supabase = await createClient();
-  const { data } = await supabase
+  const admin = createAdminClient();
+  const { data } = await admin
     .from("society_members")
     .select("*, profiles(*), units(unit_number)")
     .eq("society_id", society.id)
@@ -267,4 +235,202 @@ export async function getPendingMembers(societySlug: string) {
     .order("created_at", { ascending: false });
 
   return data ?? [];
+}
+
+export async function getAllMembers(societySlug: string) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return [];
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("society_members")
+    .select("*, profiles(*), units(unit_number)")
+    .eq("society_id", society.id)
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
+}
+
+export async function createMemberByAdmin(societySlug: string, formData: FormData) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return { error: authError || "Not found" };
+
+  const parsed = provisionMemberSchema.safeParse({
+    mobile: formData.get("mobile"),
+    password: formData.get("password"),
+    fullName: formData.get("fullName"),
+    unitNumber: formData.get("unitNumber") || "",
+    role: formData.get("role") || "owner",
+    tags: formData.get("tags") || "",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const memberCount = await getApprovedMemberCount(society.id);
+  if (society.family_limit && memberCount >= society.family_limit) {
+    return { error: "Member limit reached for this plan" };
+  }
+
+  const result = await provisionMember({
+    mobile: parsed.data.mobile,
+    password: parsed.data.password,
+    fullName: parsed.data.fullName,
+    societyId: society.id,
+    role: parsed.data.role,
+    unitNumber: parsed.data.unitNumber || undefined,
+    tags: parsed.data.tags,
+    mustChangePassword: true,
+  });
+
+  if ("error" in result && result.error) return { error: result.error };
+  if (!("success" in result)) return { error: "Provisioning failed" };
+
+  await logAuditEvent("member.create", "society_member", result.profileId, society.id);
+  revalidatePath(`/${societySlug}/admin/members`);
+  revalidatePath(`/${societySlug}/directory`);
+  return {
+    success: true,
+    credentials: {
+      mobile: parsed.data.mobile.replace(/\D/g, "").slice(-10),
+      password: parsed.data.password,
+      fullName: parsed.data.fullName,
+    },
+  };
+}
+
+export async function updateMemberByAdmin(
+  societySlug: string,
+  memberId: string,
+  formData: FormData
+) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return { error: authError || "Not found" };
+
+  const parsed = updateMemberSchema.safeParse({
+    role: formData.get("role"),
+    unitNumber: formData.get("unitNumber") || "",
+    status: formData.get("status") || undefined,
+    tags: formData.get("tags") || "",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const supabase = await createClient();
+  const { data: member } = await supabase
+    .from("society_members")
+    .select("profile_id, unit_id")
+    .eq("id", memberId)
+    .eq("society_id", society.id)
+    .single();
+
+  if (!member) return { error: "Member not found" };
+
+  let unitId = member.unit_id;
+  if (parsed.data.unitNumber !== undefined) {
+    const trimmed = parsed.data.unitNumber.trim();
+    if (trimmed) {
+      let { data: unit } = await supabase
+        .from("units")
+        .select("id")
+        .eq("society_id", society.id)
+        .eq("unit_number", trimmed)
+        .maybeSingle();
+
+      if (!unit) {
+        const { data: newUnit, error: unitError } = await supabase
+          .from("units")
+          .insert({ society_id: society.id, unit_number: trimmed })
+          .select("id")
+          .single();
+        if (unitError) return { error: unitError.message };
+        unit = newUnit;
+      }
+
+      if (
+        await unitAlreadyHasAccount(supabase, society.id, unit.id, member.profile_id)
+      ) {
+        return { error: "This house/unit already has an account" };
+      }
+      unitId = unit.id;
+    } else {
+      unitId = null;
+    }
+  }
+
+  const { error } = await supabase
+    .from("society_members")
+    .update({
+      role: parsed.data.role,
+      status: parsed.data.status ?? "approved",
+      unit_id: unitId,
+      tags: parsed.data.tags ?? [],
+    })
+    .eq("id", memberId)
+    .eq("society_id", society.id);
+
+  if (error) return { error: error.message };
+
+  await logAuditEvent("member.update", "society_member", memberId, society.id);
+  revalidatePath(`/${societySlug}/admin/members`);
+  revalidatePath(`/${societySlug}/directory`);
+  return { success: true };
+}
+
+export async function removeMemberByAdmin(societySlug: string, memberId: string) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return { error: authError || "Not found" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("society_members")
+    .update({ status: "rejected" })
+    .eq("id", memberId)
+    .eq("society_id", society.id);
+
+  if (error) return { error: error.message };
+
+  await logAuditEvent("member.deactivate", "society_member", memberId, society.id);
+  revalidatePath(`/${societySlug}/admin/members`);
+  return { success: true };
+}
+
+export async function resetMemberPasswordByAdmin(
+  societySlug: string,
+  memberId: string,
+  formData: FormData
+) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return { error: authError || "Not found" };
+
+  const parsed = resetPasswordSchema.safeParse({
+    newPassword: formData.get("newPassword"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const supabase = await createClient();
+  const { data: member } = await supabase
+    .from("society_members")
+    .select("profile_id")
+    .eq("id", memberId)
+    .eq("society_id", society.id)
+    .single();
+
+  if (!member) return { error: "Member not found" };
+
+  const userId = await getProfileUserId(member.profile_id);
+  if (!userId) return { error: "User not found" };
+
+  const result = await resetUserPassword(userId, parsed.data.newPassword);
+  if ("error" in result && result.error) return { error: result.error };
+
+  await logAuditEvent("member.reset_password", "society_member", memberId, society.id);
+  revalidatePath(`/${societySlug}/admin/members`);
+  return { success: true, password: parsed.data.newPassword };
 }

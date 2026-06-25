@@ -1,15 +1,21 @@
-import { HomeHeader } from "@/components/home/home-header";
-import { HomeHero } from "@/components/home/home-hero";
-import { FeatureCards } from "@/components/home/feature-cards";
+import { HeroShowcase } from "@/components/home/hero-showcase";
+import { FeaturesSection } from "@/components/home/features-section";
 import { HomeFooter } from "@/components/home/home-footer";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  const profile = user ? await getCurrentProfile() : null;
+
   return (
     <div className="min-h-screen flex flex-col">
-      <HomeHeader />
+      <HeroShowcase
+        isLoggedIn={Boolean(user)}
+        userName={profile?.full_name}
+        isPlatformAdmin={profile?.is_platform_admin}
+      />
       <main className="flex-1">
-        <HomeHero />
-        <FeatureCards />
+        <FeaturesSection />
       </main>
       <HomeFooter />
     </div>

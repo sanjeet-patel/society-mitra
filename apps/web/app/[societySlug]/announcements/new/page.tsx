@@ -12,7 +12,7 @@ export default async function NewAnnouncementPage({
 
   if (error === "Society not found") notFound();
   if (error === "Unauthorized") redirect(`/login?redirect=/${societySlug}/announcements/new`);
-  if (error === "Not a member") redirect(`/${societySlug}/join`);
+  if (error === "Not a member") redirect(`/login?redirect=/${societySlug}/dashboard`);
   if (error === "Forbidden") redirect(`/${societySlug}/announcements`);
 
   return (

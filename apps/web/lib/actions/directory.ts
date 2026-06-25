@@ -30,6 +30,7 @@ export async function searchDirectory(societySlug: string, query: string) {
       id,
       role,
       status,
+      tags,
       units(unit_number, floor, blocks(name)),
       profiles(
         id,
@@ -60,6 +61,8 @@ export async function searchDirectory(societySlug: string, query: string) {
     if (profile.phone?.includes(q)) return true;
     if (profile.email?.toLowerCase().includes(q)) return true;
     if (profile.vehicles?.some((v) => v.plate_number.toLowerCase().includes(q))) return true;
+    if ((member.tags as string[] | null)?.some((tag: string) => tag.toLowerCase().includes(q)))
+      return true;
 
     return false;
   });
@@ -77,6 +80,7 @@ export async function searchDirectory(societySlug: string, query: string) {
       id: member.id,
       role: member.role,
       status: member.status,
+      tags: (member.tags as string[] | null) ?? [],
       units: unitRaw
         ? {
             unit_number: unitRaw.unit_number ?? "",

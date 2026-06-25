@@ -1,4 +1,6 @@
 -- Society Mitra MVP Schema
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Enums
 CREATE TYPE member_role AS ENUM (
   'platform_admin',
@@ -546,9 +548,9 @@ CREATE POLICY "System can insert audit events"
   WITH CHECK (actor_id = get_my_profile_id() OR is_platform_admin());
 
 -- Storage buckets
-INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
-INSERT INTO storage.buckets (id, name, public) VALUES ('announcements', 'announcements', true);
-INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true) ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public) VALUES ('announcements', 'announcements', true) ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false) ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies
 CREATE POLICY "Avatar images are publicly accessible"

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSocietyAdmin, requireMembership } from "@/lib/auth";
 import { announcementSchema } from "@society-mitra/shared";
 import { revalidatePath } from "next/cache";
@@ -63,6 +64,59 @@ export async function deleteAnnouncement(societySlug: string, id: string) {
 
   revalidatePath(`/${societySlug}/announcements`);
   return { success: true };
+}
+
+export async function updateAnnouncement(
+  societySlug: string,
+  id: string,
+  formData: FormData
+) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return { error: authError || "Not found" };
+
+  const parsed = announcementSchema.safeParse({
+    title: formData.get("title"),
+    body: formData.get("body"),
+    category: formData.get("category"),
+    isPinned: formData.get("isPinned") === "on",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("announcements")
+    .update({
+      title: parsed.data.title,
+      body: parsed.data.body,
+      category: parsed.data.category,
+      is_pinned: parsed.data.isPinned,
+    })
+    .eq("id", id)
+    .eq("society_id", society.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/${societySlug}/admin/announcements`);
+  revalidatePath(`/${societySlug}/announcements`);
+  revalidatePath(`/${societySlug}/dashboard`);
+  return { success: true };
+}
+
+export async function getAllAnnouncementsAdmin(societySlug: string) {
+  const { error: authError, society } = await requireSocietyAdmin(societySlug);
+  if (authError || !society) return [];
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("announcements")
+    .select("*, profiles(full_name)")
+    .eq("society_id", society.id)
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
 }
 
 export async function getAnnouncements(societySlug: string) {

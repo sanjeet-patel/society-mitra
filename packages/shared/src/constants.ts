@@ -20,16 +20,10 @@ export const ANNOUNCEMENT_CATEGORIES = [
   { value: "general", label: "General Notice" },
 ] as const;
 
-export const SERVICE_CATEGORIES = [
-  { value: "plumber", label: "Plumber" },
-  { value: "electrician", label: "Electrician" },
-  { value: "carpenter", label: "Carpenter" },
-  { value: "ro_service", label: "RO Service" },
-  { value: "water_tanker", label: "Water Tanker" },
-  { value: "ac_repair", label: "AC Repair" },
-  { value: "gas_repair", label: "Gas Repair" },
-  { value: "internet", label: "Internet Provider" },
-  { value: "pest_control", label: "Pest Control" },
+export const CLASSIFIED_AD_TYPES = [
+  { value: "sale", label: "For Sale" },
+  { value: "rent", label: "For Rent" },
+  { value: "advertise", label: "Advertise" },
 ] as const;
 
 export const SOCIETY_PLANS = [
@@ -37,6 +31,18 @@ export const SOCIETY_PLANS = [
   { value: "starter", label: "Starter", familyLimit: 500 },
   { value: "professional", label: "Professional", familyLimit: 2000 },
   { value: "enterprise", label: "Enterprise", familyLimit: null },
+] as const;
+
+export const MEMBER_TAG_PRESETS = [
+  "President",
+  "Vice President",
+  "Secretary",
+  "Joint Secretary",
+  "Treasurer",
+  "Committee Member",
+  "Block Representative",
+  "Security Head",
+  "Maintenance Head",
 ] as const;
 
 export const BLOOD_GROUPS = [

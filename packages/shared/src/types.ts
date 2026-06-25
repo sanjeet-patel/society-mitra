@@ -20,7 +20,7 @@ export type AnnouncementCategory =
 
 export type EmergencyContactType = "external" | "society";
 
-export type ServiceCategory =
+export type LegacyServiceCategorySlug =
   | "plumber"
   | "electrician"
   | "carpenter"
@@ -64,6 +64,7 @@ export interface SocietyMember {
   block_id: string | null;
   role: MemberRole;
   status: MemberStatus;
+  tags: string[];
   created_at: string;
   updated_at: string;
 }
@@ -101,14 +102,46 @@ export interface EmergencyContact {
   created_at: string;
 }
 
+export type ClassifiedAdType = "sale" | "rent" | "advertise";
+export type ClassifiedAdStatus = "active" | "closed" | "sold";
+
+export interface ServiceCategory {
+  id: string;
+  slug: string;
+  label: string;
+  society_id: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ClassifiedAd {
+  id: string;
+  society_id: string;
+  author_id: string;
+  title: string;
+  description: string;
+  ad_type: ClassifiedAdType;
+  price: number | null;
+  contact_phone: string | null;
+  status: ClassifiedAdStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ServiceProvider {
   id: string;
   society_id: string;
   profile_id: string | null;
   name: string;
   phone: string;
-  category: ServiceCategory;
+  category: LegacyServiceCategorySlug;
+  category_id: string | null;
   description: string | null;
+  short_description: string | null;
+  full_description: string | null;
+  service_hours: string | null;
+  services_offered: string[] | null;
   is_verified: boolean;
   avg_rating: number;
   review_count: number;

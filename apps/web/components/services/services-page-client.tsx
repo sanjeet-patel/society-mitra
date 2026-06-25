@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,39 +15,52 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createServiceProvider, addServiceReview, createServiceInquiry } from "@/lib/actions/services";
-import { SERVICE_CATEGORIES } from "@society-mitra/shared";
-import { Star, CheckCircle, Phone } from "lucide-react";
+import { createServiceProvider } from "@/lib/actions/services";
+import { Star, CheckCircle, Phone, ArrowRight } from "lucide-react";
+
+interface Category {
+  id: string;
+  slug: string;
+  label: string;
+  society_id: string | null;
+}
 
 interface Provider {
   id: string;
   name: string;
   phone: string;
-  category: string;
+  short_description: string | null;
   description: string | null;
   is_verified: boolean;
   avg_rating: number;
   review_count: number;
+  service_categories: Category | Category[] | null;
 }
 
 export function ServicesPageClient({
   societySlug,
   providers: initialProviders,
+  categories,
+  selectedCategoryId,
   isAdmin,
-  selectedCategory,
 }: {
   societySlug: string;
   providers: Provider[];
-  isAdmin: boolean;
-  selectedCategory?: string;
+  categories: Category[];
+  selectedCategoryId?: string;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [providers] = useState(initialProviders);
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState("");
 
-  const categoryLabel = (cat: string) =>
-    SERVICE_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
+  const categoryLabel = (provider: Provider) => {
+    const cat = Array.isArray(provider.service_categories)
+      ? provider.service_categories[0]
+      : provider.service_categories;
+    return cat?.label ?? "Service";
+  };
 
   async function handleAddProvider(formData: FormData) {
     setError("");
@@ -59,39 +73,38 @@ export function ServicesPageClient({
     router.refresh();
   }
 
-  async function handleReview(providerId: string, formData: FormData) {
-    await addServiceReview(societySlug, providerId, formData);
-    router.refresh();
-  }
-
-  async function handleInquiry(providerId: string, formData: FormData) {
-    await createServiceInquiry(societySlug, providerId, formData);
-    alert("Inquiry sent!");
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex gap-2 flex-wrap">
-          <a href={`/${societySlug}/services`}>
-            <Button variant={!selectedCategory ? "default" : "outline"} size="sm">
+          <Link href={`/${societySlug}/services`}>
+            <Button variant={!selectedCategoryId ? "default" : "outline"} size="sm">
               All
             </Button>
-          </a>
-          {SERVICE_CATEGORIES.map((cat) => (
-            <a key={cat.value} href={`/${societySlug}/services?category=${cat.value}`}>
+          </Link>
+          {categories.map((cat) => (
+            <Link key={cat.id} href={`/${societySlug}/services?category=${cat.id}`}>
               <Button
-                variant={selectedCategory === cat.value ? "default" : "outline"}
+                variant={selectedCategoryId === cat.id ? "default" : "outline"}
                 size="sm"
               >
                 {cat.label}
               </Button>
-            </a>
+            </Link>
           ))}
         </div>
-        <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
-          Add Provider
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Link href={`/${societySlug}/admin/categories`}>
+              <Button size="sm" variant="outline">
+                Manage Categories
+              </Button>
+            </Link>
+          )}
+          <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
+            Add Provider
+          </Button>
+        </div>
       </div>
 
       {showAdd && (
@@ -113,35 +126,52 @@ export function ServicesPageClient({
                 </div>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="category">Category</Label>
-                <Select name="category" defaultValue="plumber">
+                <Label htmlFor="categoryId">Category</Label>
+                <Select name="categoryId" required>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SERVICE_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
                         {cat.label}
+                        {cat.society_id ? " (Society)" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" rows={2} />
+                <Label htmlFor="shortDescription">Short description (card)</Label>
+                <Input id="shortDescription" name="shortDescription" maxLength={160} />
               </div>
-              <Button type="submit" size="sm">Add</Button>
+              <div className="space-y-1">
+                <Label htmlFor="fullDescription">Full profile details</Label>
+                <Textarea id="fullDescription" name="fullDescription" rows={3} />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="serviceHours">Service hours</Label>
+                  <Input id="serviceHours" name="serviceHours" placeholder="9 AM – 6 PM" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="servicesOffered">Services (comma-separated)</Label>
+                  <Input id="servicesOffered" name="servicesOffered" placeholder="Leak fix, pipe install" />
+                </div>
+              </div>
+              <Button type="submit" size="sm">
+                Add
+              </Button>
             </form>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {providers.map((provider) => (
-          <Card key={provider.id}>
+          <Card key={provider.id} className="flex flex-col">
             <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div>
                   <CardTitle className="text-base flex items-center gap-2">
                     {provider.name}
@@ -149,40 +179,30 @@ export function ServicesPageClient({
                       <CheckCircle className="h-4 w-4 text-primary" />
                     )}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {categoryLabel(provider.category)}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{categoryLabel(provider)}</p>
                 </div>
-                <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1 text-sm shrink-0">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                   {Number(provider.avg_rating).toFixed(1)} ({provider.review_count})
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {provider.description && (
-                <p className="text-sm text-muted-foreground">{provider.description}</p>
-              )}
+            <CardContent className="flex flex-col flex-1 gap-3">
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {provider.short_description || provider.description || "Local service provider"}
+              </p>
               <a href={`tel:${provider.phone}`}>
-                <Button size="sm" variant="outline" className="gap-1">
+                <Button size="sm" variant="outline" className="gap-1 w-full">
                   <Phone className="h-3 w-3" />
                   {provider.phone}
                 </Button>
               </a>
-
-              <form action={(fd) => handleReview(provider.id, fd)} className="flex gap-2 items-end">
-                <div className="space-y-1 flex-1">
-                  <Label className="text-xs">Rate (1-5)</Label>
-                  <Input name="rating" type="number" min={1} max={5} defaultValue={5} className="h-8" />
-                </div>
-                <Input name="comment" placeholder="Review..." className="h-8 flex-1" />
-                <Button type="submit" size="sm" variant="secondary">Review</Button>
-              </form>
-
-              <form action={(fd) => handleInquiry(provider.id, fd)} className="flex gap-2">
-                <Input name="message" placeholder="Send inquiry..." className="h-8" required />
-                <Button type="submit" size="sm">Send</Button>
-              </form>
+              <Link href={`/${societySlug}/services/${provider.id}`} className="mt-auto">
+                <Button size="sm" variant="secondary" className="w-full gap-1">
+                  View full profile
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         ))}

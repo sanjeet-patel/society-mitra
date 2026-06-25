@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateProfile, addFamilyMember, addVehicle } from "@/lib/actions/members";
+import { changePassword } from "@/lib/actions/auth";
 import { BLOOD_GROUPS } from "@society-mitra/shared";
 
 interface ProfileData {
@@ -56,6 +57,17 @@ export function ProfileForm({
   async function handleAddVehicle(formData: FormData) {
     await addVehicle(societySlug, formData);
     router.refresh();
+  }
+
+  async function handlePasswordChange(formData: FormData) {
+    setError("");
+    setSuccess("");
+    const result = await changePassword(formData);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setSuccess("Password updated successfully");
   }
 
   return (
@@ -108,7 +120,56 @@ export function ProfileForm({
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Change password</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={handlePasswordChange} className="space-y-4 max-w-md">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Current password</Label>
+              <Input
+                id="currentPassword"
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+                minLength={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New password</Label>
+              <Input
+                id="newPassword"
+                name="newPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+              />
+            </div>
+            <Button type="submit" variant="secondary">
+              Update password
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Family Members</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Add family here — they use your account login, not separate accounts.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {profile.family_members.map((f) => (

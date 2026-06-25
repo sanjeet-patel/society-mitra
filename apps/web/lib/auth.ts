@@ -1,5 +1,43 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { authEmailToMobile } from "@society-mitra/shared";
 import type { MemberRole, MemberStatus } from "@society-mitra/shared";
+import { syncPlatformAdminFromSession } from "@/lib/auth/post-login";
+
+function getPlatformAdminPhones(): string[] {
+  return (process.env.PLATFORM_ADMIN_PHONES || "")
+    .split(",")
+    .map((p) => p.replace(/\D/g, "").slice(-10))
+    .filter(Boolean);
+}
+
+function resolveMobileFromUser(user: { email?: string | null; user_metadata?: Record<string, unknown> }) {
+  const phone = user.user_metadata?.phone;
+  return (typeof phone === "string" ? phone : null) || authEmailToMobile(user.email);
+}
+
+async function ensurePlatformAdminFlag<
+  T extends { id: string; is_platform_admin: boolean },
+>(profile: T): Promise<T> {
+  if (profile.is_platform_admin) return profile;
+
+  const user = await getCurrentUser();
+  if (!user) return profile;
+
+  const mobile = resolveMobileFromUser(user);
+  if (!mobile || !getPlatformAdminPhones().includes(mobile)) return profile;
+
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ is_platform_admin: true }).eq("id", profile.id);
+
+  return { ...profile, is_platform_admin: true };
+}
+
+export async function syncPlatformAdminProfile<
+  T extends { id: string; is_platform_admin: boolean },
+>(profile: T): Promise<T> {
+  return ensurePlatformAdminFlag(profile);
+}
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -88,11 +126,17 @@ export async function requireSocietyAdmin(societySlug: string) {
 }
 
 export async function requirePlatformAdmin() {
+  await syncPlatformAdminFromSession();
+
   const profile = await getCurrentProfile();
-  if (!profile?.is_platform_admin) {
+  if (!profile) return { error: "Forbidden" as const, profile: null };
+
+  const ensured = await ensurePlatformAdminFlag(profile);
+  if (!ensured.is_platform_admin) {
     return { error: "Forbidden" as const, profile: null };
   }
-  return { error: null, profile };
+
+  return { error: null, profile: ensured };
 }
 
 export function isAdminRole(role: MemberRole): boolean {

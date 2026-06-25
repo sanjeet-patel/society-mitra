@@ -1,80 +1,123 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { APP_URL } from "@/lib/config";
 import { redirect } from "next/navigation";
-import { loginSchema, otpSchema } from "@society-mitra/shared";
+import {
+  loginSchema,
+  changePasswordSchema,
+  normalizeIndianMobile,
+  mobileToAuthEmail,
+  authEmailToMobile,
+} from "@society-mitra/shared";
+import { logAuditEvent } from "@/lib/actions/audit";
+import { resolvePostLoginRedirect, syncPlatformAdminFromSession } from "@/lib/auth/post-login";
 
-export async function sendOtp(formData: FormData) {
-  const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
-  });
-
-  if (!parsed.success) {
-    return { error: "Please enter a valid email address" };
-  }
-
-  const supabase = await createClient();
-  const redirectTo = formData.get("redirect") as string | null;
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email: parsed.data.email,
-    options: {
-      emailRedirectTo: `${APP_URL}/auth/callback${
-        redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ""
-      }`,
-    },
-  });
-
-  if (error) return { error: error.message };
-  return { success: true, email: parsed.data.email };
+function resolveMobile(raw: string): string | null {
+  return normalizeIndianMobile(raw);
 }
 
-export async function verifyOtp(formData: FormData) {
-  const parsed = otpSchema.safeParse({
-    email: formData.get("email"),
-    token: formData.get("token"),
+export async function signIn(formData: FormData) {
+  const parsed = loginSchema.safeParse({
+    mobile: formData.get("mobile"),
+    password: formData.get("password"),
   });
 
   if (!parsed.success) {
-    return { error: "Invalid OTP" };
+    return { error: "Enter a valid mobile number and password" };
+  }
+
+  const mobile = resolveMobile(parsed.data.mobile);
+  if (!mobile) {
+    return { error: "Enter a valid 10-digit mobile number" };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
-    email: parsed.data.email,
-    token: parsed.data.token,
-    type: "email",
+  const { error } = await supabase.auth.signInWithPassword({
+    email: mobileToAuthEmail(mobile),
+    password: parsed.data.password,
   });
 
   if (error) return { error: error.message };
 
+  await syncPlatformAdminFromSession();
+
   const redirectTo = formData.get("redirect") as string | null;
-  redirect(redirectTo || "/");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user?.user_metadata?.must_change_password) {
+    const destination = await resolvePostLoginRedirect(redirectTo);
+    redirect(`/change-password?redirect=${encodeURIComponent(destination)}`);
+  }
+
+  const destination = await resolvePostLoginRedirect(redirectTo);
+  redirect(destination);
+}
+
+export async function signUp(_formData: FormData) {
+  return {
+    error:
+      "Public registration is disabled. Contact your society admin for an account.",
+  };
+}
+
+export async function changePassword(formData: FormData) {
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Unauthorized" };
+
+  const mobile =
+    (typeof user.user_metadata?.phone === "string" ? user.user_metadata.phone : null) ||
+    authEmailToMobile(user.email);
+
+  if (!mobile) return { error: "Could not verify account" };
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: mobileToAuthEmail(mobile),
+    password: parsed.data.currentPassword,
+  });
+
+  if (verifyError) return { error: "Current password is incorrect" };
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.newPassword,
+    data: { must_change_password: false },
+  });
+
+  if (error) return { error: error.message };
+
+  await logAuditEvent("auth.change_password", "profile");
+  return { success: true };
 }
 
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/");
+  redirect("/login?signedOut=1");
 }
 
 export async function syncPlatformAdmin() {
+  await syncPlatformAdminFromSession();
+}
+
+export async function mustChangePassword() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) return;
-
-  const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (adminEmails.includes(user.email.toLowerCase())) {
-    await supabase
-      .from("profiles")
-      .update({ is_platform_admin: true })
-      .eq("user_id", user.id);
-  }
+  return Boolean(user?.user_metadata?.must_change_password);
 }
