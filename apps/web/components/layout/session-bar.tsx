@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 
 export function SessionBar({
   userName,
+  roleLabel,
   homeHref = "/",
 }: {
   userName?: string | null;
+  roleLabel?: string | null;
   homeHref?: string;
 }) {
   return (
@@ -19,9 +21,12 @@ export function SessionBar({
             </Button>
           </Link>
           {userName && (
-            <span className="text-sm text-muted-foreground truncate hidden sm:inline">
-              Signed in as {userName}
-            </span>
+            <div className="min-w-0 hidden sm:block">
+              <p className="text-sm font-medium truncate">{userName}</p>
+              {roleLabel && (
+                <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
+              )}
+            </div>
           )}
         </div>
         <LogoutButton />

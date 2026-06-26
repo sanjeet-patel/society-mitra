@@ -15,6 +15,7 @@ import {
   provisionMemberSchema,
   updateMemberSchema,
   resetPasswordSchema,
+  joinSocietySchema,
 } from "@society-mitra/shared";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -43,12 +44,115 @@ async function unitAlreadyHasAccount(
 }
 
 export async function joinSociety(societySlug: string, formData: FormData) {
-  void formData;
-  void societySlug;
-  return {
-    error:
-      "Self-join is disabled. Contact your society admin to get an account.",
+  const society = await getSocietyBySlug(societySlug);
+  if (!society) return { error: "Society not found" };
+
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Sign in to request membership" };
+
+  const phoneRaw = formData.get("phone");
+  const phone =
+    (typeof phoneRaw === "string" && phoneRaw.trim() ? phoneRaw : null) ||
+    profile.phone ||
+    undefined;
+
+  const parsed = joinSocietySchema.safeParse({
+    fullName: formData.get("fullName") || profile.full_name,
+    phone,
+    unitNumber: formData.get("unitNumber"),
+    role: formData.get("role") || "owner",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("society_members")
+    .select("id, status")
+    .eq("society_id", society.id)
+    .eq("profile_id", profile.id)
+    .maybeSingle();
+
+  if (existing?.status === "approved") {
+    return { error: "You are already a member of this society" };
+  }
+  if (existing?.status === "pending") {
+    return { error: "Your join request is already pending approval" };
+  }
+
+  const admin = createAdminClient();
+
+  let unitId: string | null = null;
+  const trimmedUnit = parsed.data.unitNumber.trim();
+  if (trimmedUnit) {
+    const { data: unit } = await admin
+      .from("units")
+      .select("id")
+      .eq("society_id", society.id)
+      .eq("unit_number", trimmedUnit)
+      .maybeSingle();
+
+    if (unit) {
+      const { data: unitTaken } = await admin
+        .from("society_members")
+        .select("id")
+        .eq("society_id", society.id)
+        .eq("unit_id", unit.id)
+        .neq("profile_id", profile.id)
+        .in("status", ["pending", "approved"])
+        .maybeSingle();
+
+      if (unitTaken) {
+        return { error: "This house/unit already has a pending or approved account" };
+      }
+      unitId = unit.id;
+    } else {
+      const { data: newUnit, error: unitError } = await admin
+        .from("units")
+        .insert({ society_id: society.id, unit_number: trimmedUnit })
+        .select("id")
+        .single();
+      if (unitError) return { error: unitError.message };
+      unitId = newUnit.id;
+    }
+  }
+
+  if (parsed.data.fullName !== profile.full_name || parsed.data.phone !== profile.phone) {
+    const supabase = await createClient();
+    await supabase
+      .from("profiles")
+      .update({
+        full_name: parsed.data.fullName,
+        phone: parsed.data.phone || profile.phone,
+      })
+      .eq("id", profile.id);
+  }
+
+  const memberPayload = {
+    society_id: society.id,
+    profile_id: profile.id,
+    unit_id: unitId,
+    role: parsed.data.role,
+    status: "pending" as const,
   };
+
+  if (existing?.status === "rejected") {
+    const { error } = await admin
+      .from("society_members")
+      .update(memberPayload)
+      .eq("id", existing.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await admin.from("society_members").insert(memberPayload);
+    if (error) return { error: error.message };
+  }
+
+  revalidatePath(`/${societySlug}/admin/members`);
+  revalidatePath("/admin/members");
+  return { success: true };
 }
 
 export async function approveMember(
@@ -98,7 +202,9 @@ export async function approveMember(
 
   if (error) return { error: error.message };
 
+  await logAuditEvent("member.approve", "society_member", memberId, society.id, { status });
   revalidatePath(`/${societySlug}/admin/members`);
+  revalidatePath("/admin/members");
   return { success: true };
 }
 

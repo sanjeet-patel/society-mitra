@@ -101,15 +101,18 @@ export async function requireMembership(societySlug: string) {
 }
 
 export async function requireSocietyAdmin(societySlug: string) {
+  await syncPlatformAdminFromSession();
+
   const society = await getSocietyBySlug(societySlug);
   if (!society) return { error: "Society not found" as const, society: null, profile: null, membership: null };
 
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" as const, society, profile: null, membership: null };
 
-  if (profile.is_platform_admin) {
-    const membership = await getMembership(society.id, profile.id);
-    return { error: null, society, profile, membership };
+  const ensured = await ensurePlatformAdminFlag(profile);
+  if (ensured.is_platform_admin) {
+    const membership = await getMembership(society.id, ensured.id);
+    return { error: null, society, profile: ensured, membership };
   }
 
   const membership = await getMembership(society.id, profile.id);

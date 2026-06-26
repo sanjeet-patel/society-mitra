@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
   loginSchema,
+  signupSchema,
   changePasswordSchema,
   normalizeIndianMobile,
   mobileToAuthEmail,
@@ -55,11 +56,52 @@ export async function signIn(formData: FormData) {
   redirect(destination);
 }
 
-export async function signUp(_formData: FormData) {
-  return {
-    error:
-      "Public registration is disabled. Contact your society admin for an account.",
-  };
+export async function signUp(formData: FormData) {
+  const parsed = signupSchema.safeParse({
+    mobile: formData.get("mobile"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+    fullName: formData.get("fullName"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
+  const mobile = resolveMobile(parsed.data.mobile);
+  if (!mobile) {
+    return { error: "Enter a valid 10-digit mobile number" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email: mobileToAuthEmail(mobile),
+    password: parsed.data.password,
+    options: {
+      data: {
+        phone: mobile,
+        full_name: parsed.data.fullName,
+      },
+    },
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("already registered") || message.includes("already exists")) {
+      return { error: "This mobile number is already registered. Please sign in instead." };
+    }
+    return { error: error.message };
+  }
+
+  if (!data.user) {
+    return { error: "Registration failed. Please try again." };
+  }
+
+  await logAuditEvent("auth.signup", "profile");
+
+  const redirectTo = formData.get("redirect") as string | null;
+  const destination = await resolvePostLoginRedirect(redirectTo);
+  redirect(destination);
 }
 
 export async function changePassword(formData: FormData) {

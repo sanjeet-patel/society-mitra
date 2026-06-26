@@ -21,14 +21,14 @@ export default async function AdminSocietiesPage() {
   const { societies } = await listSocieties();
 
   return (
-    <main className="container mx-auto px-4 py-8 grid lg:grid-cols-2 gap-8">
+    <div className="space-y-8 grid lg:grid-cols-2 gap-8">
       <div>
-        <h1 className="text-2xl font-bold mb-4">Create Society</h1>
+        <h1 className="text-2xl font-bold tracking-tight mb-4">Create society</h1>
         <CreateSocietyForm />
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold mb-4">Societies ({societies.length})</h2>
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Societies ({societies.length})</h2>
         <div className="space-y-3">
           {societies.map((society) => (
             <Card key={society.id}>
@@ -60,6 +60,6 @@ export default async function AdminSocietiesPage() {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

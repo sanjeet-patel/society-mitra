@@ -95,6 +95,20 @@ export function LoginForm({
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          <p className="text-sm text-muted-foreground mt-6 text-center">
+            New here?{" "}
+            <a
+              href={
+                redirectPath
+                  ? `/signup?redirect=${encodeURIComponent(redirectPath)}`
+                  : "/signup"
+              }
+              className="text-primary font-medium hover:underline"
+            >
+              Create an account
+            </a>
+          </p>
         </CardContent>
       </Card>
 

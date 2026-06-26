@@ -1,11 +1,10 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { requireSocietyAdmin } from "@/lib/auth";
 import {
   getServiceCategoriesForSociety,
   listSocietyCategories,
 } from "@/lib/actions/categories";
 import { CategoryManager } from "@/components/admin/category-manager";
-import { SocietyAdminHeader } from "@/components/admin/society-admin-header";
 
 export default async function SocietyCategoriesPage({
   params,
@@ -15,7 +14,7 @@ export default async function SocietyCategoriesPage({
   const { societySlug } = await params;
   const result = await requireSocietyAdmin(societySlug);
   if (result.error === "Society not found") notFound();
-  if (result.error) redirect(`/${societySlug}/dashboard`);
+  if (result.error || !result.society) return null;
 
   const globalCategories = (await getServiceCategoriesForSociety(societySlug)).filter(
     (c) => !c.society_id
@@ -23,12 +22,11 @@ export default async function SocietyCategoriesPage({
   const { categories: societyCategories } = await listSocietyCategories(societySlug);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <SocietyAdminHeader
-        societySlug={societySlug}
-        societyName={result.society!.name}
-        title="Service categories"
-      />
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Service categories</h1>
+        <p className="text-muted-foreground text-sm mt-1">{result.society.name}</p>
+      </div>
       <CategoryManager
         scope="society"
         societySlug={societySlug}

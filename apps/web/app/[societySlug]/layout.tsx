@@ -1,12 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import {
   getSocietyBySlug,
-  getCurrentProfile,
   getMembership,
   getCurrentUser,
 } from "@/lib/auth";
 import { SocietyNav } from "@/components/layout/society-nav";
 import { SessionBar } from "@/components/layout/session-bar";
+import { SocietyRouteChrome } from "@/components/layout/society-route-chrome";
+import { getSessionActor } from "@/lib/auth/session-actor";
 
 export default async function SocietyLayout({
   children,
@@ -25,24 +26,33 @@ export default async function SocietyLayout({
     redirect(`/change-password?redirect=/${societySlug}/dashboard`);
   }
 
-  const profile = await getCurrentProfile();
+  const actor = user ? await getSessionActor(society.id) : null;
   let membership = null;
-  if (profile) {
-    membership = await getMembership(society.id, profile.id);
+  if (actor) {
+    membership = await getMembership(society.id, actor.id);
   }
+
+  const displayName = actor?.displayName ?? null;
+  const isPlatformAdmin = actor?.isPlatformAdmin ?? false;
 
   return (
     <div className="min-h-screen flex flex-col">
-      {membership?.status === "approved" ? (
-        <SocietyNav
-          societySlug={societySlug}
-          societyName={society.name}
-          role={membership.role}
-          isPlatformAdmin={profile?.is_platform_admin}
-        />
-      ) : user ? (
-        <SessionBar userName={profile?.full_name} homeHref={`/${societySlug}`} />
-      ) : null}
+      <SocietyRouteChrome>
+        {membership?.status === "approved" ? (
+          <SocietyNav
+            societySlug={societySlug}
+            societyName={society.name}
+            role={membership.role}
+            isPlatformAdmin={isPlatformAdmin}
+          />
+        ) : user ? (
+          <SessionBar
+            userName={displayName}
+            roleLabel={actor?.roleLabel}
+            homeHref={`/${societySlug}`}
+          />
+        ) : null}
+      </SocietyRouteChrome>
       <main className="flex-1">{children}</main>
     </div>
   );

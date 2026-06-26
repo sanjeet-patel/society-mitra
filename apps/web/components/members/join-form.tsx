@@ -2,20 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { joinSociety } from "@/lib/actions/members";
+import { toast } from "sonner";
 
-export function JoinSocietyForm({ societySlug }: { societySlug: string }) {
+export function JoinSocietyForm({
+  societySlug,
+  defaultFullName = "",
+  defaultPhone = "",
+}: {
+  societySlug: string;
+  defaultFullName?: string;
+  defaultPhone?: string | null;
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,11 +30,12 @@ export function JoinSocietyForm({ societySlug }: { societySlug: string }) {
     setLoading(false);
 
     if (result.error) {
-      setError(result.error);
+      toast.error(result.error);
       return;
     }
 
-    router.push(`/${societySlug}`);
+    toast.success("Join request submitted — awaiting admin approval");
+    router.push(`/${societySlug}/join`);
     router.refresh();
   }
 
@@ -51,12 +54,18 @@ export function JoinSocietyForm({ societySlug }: { societySlug: string }) {
 
           <div className="space-y-2">
             <Label htmlFor="fullName">Full Name</Label>
-            <Input id="fullName" name="fullName" required />
+            <Input id="fullName" name="fullName" required defaultValue={defaultFullName} />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">Mobile Number</Label>
-            <Input id="phone" name="phone" type="tel" placeholder="9876543210" />
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="9876543210"
+              defaultValue={defaultPhone ?? ""}
+            />
           </div>
 
           <div className="space-y-2">
@@ -66,21 +75,21 @@ export function JoinSocietyForm({ societySlug }: { societySlug: string }) {
 
           <div className="space-y-2">
             <Label htmlFor="role">I am a</Label>
-            <Select name="role" defaultValue="owner">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="owner">Owner</SelectItem>
-                <SelectItem value="tenant">Tenant</SelectItem>
-                <SelectItem value="vendor">Vendor / Business</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              id="role"
+              name="role"
+              defaultValue="owner"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="owner">Owner</option>
+              <option value="tenant">Tenant</option>
+              <option value="vendor">Vendor / Business</option>
+            </select>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Submitting..." : "Submit Join Request"}
-          </Button>
+          <SubmitButton type="submit" className="w-full" pending={loading} pendingLabel="Submitting…">
+            Submit join request
+          </SubmitButton>
         </form>
       </CardContent>
     </Card>

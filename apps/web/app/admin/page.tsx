@@ -36,8 +36,13 @@ export default async function PlatformDashboardPage() {
   const { stats } = result;
 
   return (
-    <main className="container mx-auto px-4 py-8 space-y-8">
-      <h1 className="text-2xl font-bold text-palette-navy">Platform Dashboard</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Platform Dashboard</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Overview of all societies, members, and activity.
+        </p>
+      </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -111,7 +116,14 @@ export default async function PlatformDashboardPage() {
 
           <div className="space-y-8">
             <div>
-              <h2 className="text-xl font-bold mb-4">Recent members</h2>
+              <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
+                Recent members
+                <Link href="/admin/members">
+                  <Button size="sm" variant="outline">
+                    User management
+                  </Button>
+                </Link>
+              </h2>
               <div className="space-y-2">
                 {stats.recentMembers.map((m) => {
                   const society = m.societies as { name?: string; slug?: string } | null;
@@ -151,6 +163,6 @@ export default async function PlatformDashboardPage() {
             </div>
           </div>
         </div>
-    </main>
+    </div>
   );
 }

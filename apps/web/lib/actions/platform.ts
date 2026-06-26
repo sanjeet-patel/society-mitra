@@ -251,3 +251,51 @@ export async function getAllPlatformClassifieds() {
 
   return data ?? [];
 }
+
+export async function getPlatformPendingMemberCount() {
+  const { error: authError } = await requirePlatformAdmin();
+  if (authError) return 0;
+
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("society_members")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
+  return count ?? 0;
+}
+
+export async function getAllPendingPlatformMembers() {
+  const { error: authError } = await requirePlatformAdmin();
+  if (authError) return [];
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("society_members")
+    .select("*, societies(name, slug), profiles(full_name, phone), units(unit_number)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
+}
+
+export async function getSocietyMemberStats(societyId: string) {
+  const { error: authError } = await requirePlatformAdmin();
+  if (authError) return { approved: 0, pending: 0 };
+
+  const admin = createAdminClient();
+  const [{ count: approved }, { count: pending }] = await Promise.all([
+    admin
+      .from("society_members")
+      .select("*", { count: "exact", head: true })
+      .eq("society_id", societyId)
+      .eq("status", "approved"),
+    admin
+      .from("society_members")
+      .select("*", { count: "exact", head: true })
+      .eq("society_id", societyId)
+      .eq("status", "pending"),
+  ]);
+
+  return { approved: approved ?? 0, pending: pending ?? 0 };
+}

@@ -64,11 +64,40 @@ export default async function SocietyLandingPage({
             {!profile && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Accounts are created by your society admin. Sign in with the mobile number and
-                  password shared with you.
+                  Create an account, then request to join this society. Society admins approve new
+                  members.
                 </p>
-                <Link href={`/login?redirect=/${societySlug}/dashboard`}>
-                  <Button className="w-full">Sign In</Button>
+                <Link href={`/signup?redirect=/${societySlug}/join`}>
+                  <Button className="w-full">Register</Button>
+                </Link>
+                <Link href={`/login?redirect=/${societySlug}/join`}>
+                  <Button variant="outline" className="w-full">
+                    Sign in
+                  </Button>
+                </Link>
+              </>
+            )}
+
+            {profile && !membership && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Request access to {society.name}. An admin will review your join request.
+                </p>
+                <Link href={`/${societySlug}/join`}>
+                  <Button className="w-full">Request to join</Button>
+                </Link>
+              </>
+            )}
+
+            {profile && membership?.status === "pending" && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Your join request is pending approval by a society admin.
+                </p>
+                <Link href={`/${societySlug}/join`}>
+                  <Button variant="outline" className="w-full">
+                    View request status
+                  </Button>
                 </Link>
               </>
             )}
@@ -79,10 +108,15 @@ export default async function SocietyLandingPage({
               </Link>
             )}
 
-            {profile && membership?.status !== "approved" && (
-              <p className="text-sm text-muted-foreground">
-                Your account is not active in this society. Contact your society admin for access.
-              </p>
+            {profile && membership?.status === "rejected" && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Your previous request was not approved. You may submit a new join request.
+                </p>
+                <Link href={`/${societySlug}/join`}>
+                  <Button className="w-full">Request again</Button>
+                </Link>
+              </>
             )}
           </CardContent>
         </Card>
