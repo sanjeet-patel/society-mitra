@@ -11,6 +11,7 @@ import {
   updateServiceProvider,
   deleteServiceProvider,
 } from "@/lib/actions/services";
+import { editFormKey } from "@/lib/form-key";
 
 interface Provider {
   id: string;
@@ -66,7 +67,19 @@ export function VendorManager({
                 {p.is_verified ? "Verified" : "Unverified"}
               </Badge>
             </div>
-            <form action={(fd) => handleUpdate(p.id, fd)} className="grid sm:grid-cols-2 gap-2">
+            <form
+              key={editFormKey(
+                p.id,
+                p.name,
+                p.phone,
+                p.category_id,
+                p.short_description,
+                p.service_hours,
+                p.is_verified
+              )}
+              action={(fd) => handleUpdate(p.id, fd)}
+              className="grid sm:grid-cols-2 gap-2"
+            >
               <Input name="name" defaultValue={p.name} required className="h-8" />
               <Input name="phone" defaultValue={p.phone} required className="h-8" />
               <select

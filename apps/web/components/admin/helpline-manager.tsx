@@ -10,6 +10,7 @@ import {
   updateEmergencyContact,
   deleteEmergencyContact,
 } from "@/lib/actions/emergency";
+import { editFormKey } from "@/lib/form-key";
 
 interface Contact {
   id: string;
@@ -51,7 +52,19 @@ export function HelplineManager({
       {contacts.map((c) => (
         <Card key={c.id}>
           <CardContent className="pt-4">
-            <form action={(fd) => handleUpdate(c.id, fd)} className="grid sm:grid-cols-3 gap-2 items-end">
+            <form
+              key={editFormKey(
+                c.id,
+                c.name,
+                c.phone,
+                c.contact_type,
+                c.role_label,
+                c.whatsapp,
+                c.sort_order
+              )}
+              action={(fd) => handleUpdate(c.id, fd)}
+              className="grid sm:grid-cols-3 gap-2 items-end"
+            >
               <Input name="name" defaultValue={c.name} required className="h-8" />
               <Input name="phone" defaultValue={c.phone} required className="h-8" />
               <select name="contactType" defaultValue={c.contact_type} className="h-8 border rounded-md px-2 text-sm">

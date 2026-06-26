@@ -12,6 +12,7 @@ import {
   updateAnnouncement,
   deleteAnnouncement,
 } from "@/lib/actions/announcements";
+import { editFormKey } from "@/lib/form-key";
 
 interface Announcement {
   id: string;
@@ -56,7 +57,11 @@ export function AnnouncementManager({
               <p className="font-medium">{a.title}</p>
               {a.is_pinned && <Badge>Pinned</Badge>}
             </div>
-            <form action={(fd) => handleUpdate(a.id, fd)} className="space-y-2">
+            <form
+              key={editFormKey(a.id, a.title, a.body, a.category, a.is_pinned)}
+              action={(fd) => handleUpdate(a.id, fd)}
+              className="space-y-2"
+            >
               <Input name="title" defaultValue={a.title} required className="h-8" />
               <Textarea name="body" defaultValue={a.body} required rows={3} />
               <div className="flex flex-wrap gap-2 items-center">

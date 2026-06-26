@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createGlobalCategory, createSocietyCategory, updateCategory, deleteCategory } from "@/lib/actions/categories";
+import { editFormKey } from "@/lib/form-key";
 
 interface Category {
   id: string;
@@ -76,7 +77,7 @@ export function CategoryManager({
         <CardContent className="space-y-4">
           {list.map((cat) => (
             <form
-              key={cat.id}
+              key={editFormKey(cat.id, cat.slug, cat.label, cat.sort_order)}
               action={(fd) => handleUpdate(cat.id, fd)}
               className="grid sm:grid-cols-4 gap-2 items-end border-b pb-3"
             >

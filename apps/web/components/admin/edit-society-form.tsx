@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateSociety } from "@/lib/actions/platform";
+import { editFormKey } from "@/lib/form-key";
 
 const PLANS = ["free", "starter", "professional", "enterprise"] as const;
 
@@ -33,7 +34,16 @@ export function EditSocietyForm({
         <CardTitle className="text-base">Edit society</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="grid sm:grid-cols-2 gap-3">
+        <form
+          key={editFormKey(
+            societyId,
+            defaultValues.name,
+            defaultValues.city,
+            defaultValues.plan
+          )}
+          action={handleSubmit}
+          className="grid sm:grid-cols-2 gap-3"
+        >
           <div className="space-y-1">
             <Label>Name</Label>
             <Input name="name" defaultValue={defaultValues.name} required />

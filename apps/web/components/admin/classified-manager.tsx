@@ -10,6 +10,7 @@ import {
   updateClassifiedAd,
   deleteClassifiedAd,
 } from "@/lib/actions/classifieds";
+import { editFormKey } from "@/lib/form-key";
 
 interface Ad {
   id: string;
@@ -55,7 +56,19 @@ export function ClassifiedManager({
               </div>
               <Badge variant={ad.status === "active" ? "default" : "secondary"}>{ad.status}</Badge>
             </div>
-            <form action={(fd) => handleUpdate(ad.id, fd)} className="grid sm:grid-cols-2 gap-2">
+            <form
+              key={editFormKey(
+                ad.id,
+                ad.title,
+                ad.description,
+                ad.ad_type,
+                ad.price,
+                ad.contact_phone,
+                ad.status
+              )}
+              action={(fd) => handleUpdate(ad.id, fd)}
+              className="grid sm:grid-cols-2 gap-2"
+            >
               <Input name="title" defaultValue={ad.title} required className="h-8" />
               <select name="adType" defaultValue={ad.ad_type} className="h-8 border rounded-md px-2 text-sm">
                 <option value="sell">Sell</option>
